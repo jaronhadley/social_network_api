@@ -44,10 +44,8 @@ module.exports = {
       .then((user) =>
         !user
           ? res.status(404).json({ message: 'No such user exists' })
-          : Thought.findOneAndUpdate(
-              { user: req.params.userId },
-              { $pull: { user: req.params.userId } },
-              { new: true }
+          : Thought.deleteMany(
+              { _id: {$in: user.thoughts}},
             )
       )
       .then((thought) =>
@@ -72,15 +70,21 @@ module.exports = {
       { $addToSet: { friends: req.params.friendId } },
       { runValidators: true, new: true }
     )
-      .then((user) =>
+      .then(async (user) =>
         !user
           ? res
               .status(404)
               .json({ message: 'No user found with that ID :(' })
-          : res.json(user)
+          :      User.findOneAndUpdate( // add user to friend
+                  { _id: req.params.friendId },
+                  { $addToSet: { friends: req.params.userId } },
+                  { runValidators: true, new: true }
+                )
+                .then((friend) => res.json(friend))
       )
       .catch((err) => res.status(500).json(err));
   },
+
   // Remove friend from a user
   removeFriend(req, res) {
     User.findOneAndUpdate(
@@ -97,6 +101,8 @@ module.exports = {
       )
       .catch((err) => res.status(500).json(err));
   },
+
+  // update user details
   editUser(req, res) {
     User.findOneAndUpdate(
       { _id: req.params.userId },
